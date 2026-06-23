@@ -457,8 +457,72 @@ export class SlackClient {
     return null;
   }
 
+  // Get the Activity feed (browser auth only — internal endpoint).
+  // mode: 'chrono_reads_and_unreads' (all recent activity, matches the UI) or
+  //       'priority_unreads_v1' (curated priority-only unreads).
+  async getActivityFeed(options: {
+    mode?: string;
+    types?: string;
+    limit?: number;
+    cursor?: string;
+  } = {}): Promise<any> {
+    if (this.config.auth_type !== 'browser') {
+      throw new Error('Activity feed requires browser authentication (xoxc/xoxd)');
+    }
+
+    const params: Record<string, any> = {
+      mode: options.mode || ACTIVITY_DEFAULT_MODE,
+      types: options.types || ACTIVITY_DEFAULT_TYPES,
+      limit: options.limit || 50,
+      _x_reason: 'fetchActivityFeed',
+      _x_mode: 'online',
+      _x_sonic: 'true',
+      _x_app_name: 'client',
+    };
+    if (options.cursor) params.cursor = options.cursor;
+
+    return this.request('activity.feed', params);
+  }
+
+  // List Activity views/tabs (browser auth only — internal endpoint)
+  async getActivityViews(): Promise<any> {
+    if (this.config.auth_type !== 'browser') {
+      throw new Error('Activity views require browser authentication (xoxc/xoxd)');
+    }
+    return this.request('activity.views', {});
+  }
+
   // Check auth type
   get authType(): string {
     return this.config.auth_type;
   }
 }
+
+// Default Activity feed mode: all recent activity in reverse-chronological
+// order, matching what the Slack "Activity" tab shows.
+export const ACTIVITY_DEFAULT_MODE = 'chrono_reads_and_unreads';
+
+// Default Activity entry types (union of all tabs).
+// Note: thread_v2 superseded thread_reply — sending both is rejected by the
+// API, so only thread_v2 is included here.
+export const ACTIVITY_DEFAULT_TYPES = [
+  'thread_v2',
+  'dm',
+  'generic_system_alert',
+  'message_reaction',
+  'internal_channel_invite',
+  'external_channel_invite',
+  'shared_workspace_invite',
+  'external_dm_invite',
+  'list_record_edited',
+  'list_record_assigned',
+  'list_user_mentioned',
+  'list_todo_notification',
+  'bot_dm_bundle',
+  'at_user',
+  'at_user_group',
+  'at_channel',
+  'at_everyone',
+  'keyword',
+  'unjoined_channel_mention',
+].join(',');

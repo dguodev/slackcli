@@ -7,6 +7,7 @@ import { createMessagesCommand } from './commands/messages.ts';
 import { createCanvasCommand } from './commands/canvas.ts';
 import { createUpdateCommand } from './commands/update.ts';
 import { createSavedCommand } from './commands/saved.ts';
+import { createActivityCommand } from './commands/activity.ts';
 import { createSearchCommand } from './commands/search.ts';
 import { notifyIfUpdateAvailable } from './lib/updater.ts';
 import chalk from 'chalk';
@@ -22,6 +23,7 @@ program
   .version(APP_VERSION);
 
 // Add commands
+program.addCommand(createActivityCommand());
 program.addCommand(createAuthCommand());
 program.addCommand(createCanvasCommand());
 program.addCommand(createConversationsCommand());

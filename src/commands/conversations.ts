@@ -20,6 +20,7 @@ export function createConversationsCommand(): Command {
     .option('--exclude-archived', 'Exclude archived conversations', false)
     .option('--cursor <cursor>', 'Pagination cursor for next page of results')
     .option('--workspace <id|name>', 'Workspace to use (overrides default)')
+    .option('--json', 'Output in JSON format', false)
     .action(async (options) => {
       const spinner = ora('Fetching conversations...').start();
 
@@ -55,11 +56,19 @@ export function createConversationsCommand(): Command {
 
         spinner.succeed(`Found ${channels.length} conversations`);
 
-        console.log('\n' + formatChannelList(channels, users));
+        if (options.json) {
+          console.log(JSON.stringify({
+            channel_count: channels.length,
+            channels,
+            response_metadata: response.response_metadata,
+          }, null, 2));
+        } else {
+          console.log('\n' + formatChannelList(channels, users));
 
-        if (nextCursor) {
-          console.log(chalk.dim('\nMore results available. Next page:'));
-          console.log(chalk.cyan(`  slackcli conversations list --cursor "${nextCursor}"\n`));
+          if (nextCursor) {
+            console.log(chalk.dim('\nMore results available. Next page:'));
+            console.log(chalk.cyan(`  slackcli conversations list --cursor "${nextCursor}"\n`));
+          }
         }
       } catch (err: any) {
         spinner.fail('Failed to fetch conversations');
@@ -258,6 +267,35 @@ export function createConversationsCommand(): Command {
         }
       } catch (err: any) {
         spinner.fail('Failed to fetch message');
+        error(err.message);
+        process.exit(1);
+      }
+    });
+
+  // Get conversation info by channel ID
+  conversations
+    .command('info')
+    .description('Get conversation metadata by channel ID')
+    .argument('<channel-id>', 'Channel ID')
+    .option('--workspace <id|name>', 'Workspace to use')
+    .option('--json', 'Output in JSON format', false)
+    .action(async (channelId, options) => {
+      const spinner = ora('Fetching conversation info...').start();
+
+      try {
+        const client = await getAuthenticatedClient(options.workspace);
+        const response = await client.getConversationInfo(channelId);
+        const channel = response.channel;
+
+        spinner.succeed('Conversation found');
+
+        if (options.json) {
+          console.log(JSON.stringify({ channel }, null, 2));
+        } else if (channel) {
+          console.log(`\n${channel.name || channel.id} (${channel.id})`);
+        }
+      } catch (err: any) {
+        spinner.fail('Failed to fetch conversation info');
         error(err.message);
         process.exit(1);
       }
